@@ -17,6 +17,7 @@ typedef struct Node {
     int pNum; // processor ID
     int mem_mod; 
     int numAccess;
+    int mean;
     struct Node* next;
 } Node;
 
@@ -40,16 +41,16 @@ void insertNode(int pNum) {
 }
 
 //Function to assign random value considering the type of distribution
-int assignRandomValue(char dist, int mean, int mem_size)
+int assignRandomValue(Node* listNode, char dist, int mem_size)
 {
     if(dist=='u')
         return rand_uniform(mem_size);
     else 
-        return rand_normal_wrap(mean, STANDARD_DEVIATION, mem_size);
+        return rand_normal_wrap(listNode->mean, STANDARD_DEVIATION, mem_size);
 }
 
 // Function to allocate memory modules and update number of accesses for each process
-Node* allocateMemoryModules(int memory_modules[], int mean, char dist, int mem_size) {
+Node* allocateMemoryModules(int memory_modules[], char dist, int mem_size) {
 
     Node* curr = head;
     Node* first_denied = NULL;
@@ -58,7 +59,7 @@ Node* allocateMemoryModules(int memory_modules[], int mean, char dist, int mem_s
         {
             curr->numAccess += 1;
             memory_modules[curr->mem_mod] = curr->pNum;
-            curr->mem_mod = assignRandomValue(dist, mean, mem_size);
+            curr->mem_mod = assignRandomValue(curr,dist, mem_size);
             
         } else {
             if(first_denied==NULL)
@@ -92,13 +93,18 @@ void simulate(double* avg_access_time, int avg_access_time_len, int procs, char 
 
     for(int i=1; i<=NUM_MEMORY_MODULES; i++) 
     {
-        int mean = rand_uniform(i);
+        Node* tempNode = head;
+        do {
+            tempNode->mean = rand_uniform(i);
+            tempNode = tempNode->next;
+        }while(tempNode!=head);
+        
         T_previous=0;
 
         // code to assign random memory modules to processors in circular queue
         Node* temp  = head;
         do{ 
-            temp->mem_mod = assignRandomValue(dist, mean , i);
+            temp->mem_mod = assignRandomValue(temp,dist , i);
         }while (temp!=head);
 
 
@@ -112,7 +118,7 @@ void simulate(double* avg_access_time, int avg_access_time_len, int procs, char 
         for(int cpu_cycle=1; cpu_cycle<=MAX_CPU_CYCLES; cpu_cycle++) 
         {
             // change head of the linked list to the first process denied memory module
-            Node* denied_process = allocateMemoryModules(memory_modules, mean, dist, i);
+            Node* denied_process = allocateMemoryModules(memory_modules, dist, i);
             if (denied_process != NULL) {
                 head = denied_process;
             }
