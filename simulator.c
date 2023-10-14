@@ -93,6 +93,7 @@ void simulate(double* avg_access_time, int avg_access_time_len, int procs, char 
     for(int i=1; i<=NUM_MEMORY_MODULES; i++) 
     {
         int mean = rand_uniform(i);
+        T_previous=0;
 
         // code to assign random memory modules to processors in circular queue
         Node* temp  = head;
@@ -189,3 +190,4 @@ int rand_normal_wrap(int mean, int dev, int max) {
         res_wrapped += max;
     return res_wrapped;
 }
+
