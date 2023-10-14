@@ -1,3 +1,7 @@
+/**
+ * The code simulates a memory allocation system for multiple processors using a circular linked
+ * list and calculates the average access time for each processor.
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -12,7 +16,7 @@ double PI_VAL = 3.14159265358979323846;
 
 struct Node* head = NULL;
 
-// Node defined for linked list
+/** Node defined for linked list. This linked list will store processor data*/
 typedef struct Node {
     int pNum; // processor ID
     int mem_mod; 
@@ -21,7 +25,7 @@ typedef struct Node {
     struct Node* next;
 } Node;
 
-// Utility function to insert nodes in the circular linked list (queue)
+/** Utility function to insert nodes in the circular linked list (queue)*/
 void insertNode(int pNum) {
     struct Node* newNode = (struct Node*)malloc(sizeof(struct Node));
     newNode->pNum = pNum;
@@ -40,7 +44,7 @@ void insertNode(int pNum) {
     }
 }
 
-//Function to assign random value considering the type of distribution
+/**Function to assign random value basis the type of distribution passed in the argument*/
 int assignRandomValue(Node* listNode, char dist, int mem_size)
 {
     if(dist=='u')
@@ -49,7 +53,10 @@ int assignRandomValue(Node* listNode, char dist, int mem_size)
         return rand_normal_wrap(listNode->mean, STANDARD_DEVIATION, mem_size);
 }
 
-// Function to allocate memory modules and update number of accesses for each process
+/**
+ * The function "allocateMemoryModules" assigns memory modules to nodes based on certain conditions and
+ * returns the first node that was denied a memory module.
+ */
 Node* allocateMemoryModules(int memory_modules[], char dist, int mem_size) {
 
     Node* curr = head;
@@ -71,7 +78,9 @@ Node* allocateMemoryModules(int memory_modules[], char dist, int mem_size) {
     return first_denied;
 }
 
-//Function to form a circular queue using linked list
+/**
+ * This function creates a circular queue by inserting nodes with values from 1 to procs.
+ */
 void createCircularQueue(int procs) {
 
     for (int i = 1; i <= procs; i++) {
@@ -79,90 +88,102 @@ void createCircularQueue(int procs) {
     }
 }
 
+/* Calculates the total time cummulative for each memory module and cpu cycle*/
+int computeTotalTimeCummulative(int cpu_cycle) {
+    Node* curr = head;
+    float tot_tc_pi = 0;
+    float tc_pi = 0;
 
+    do {
+        if (curr->numAccess != 0)
+            tc_pi = (float)cpu_cycle / curr->numAccess;
+        else 
+            tc_pi = 0;
 
+        tot_tc_pi += tc_pi;
+        curr = curr->next;
+
+    } while (curr != head);  
+
+    return tot_tc_pi;
+}
+
+/**
+ * Simulate memory access time for various configurations.
+ *
+ * This function performs a simulation to estimate the average memory access time
+ * for a range of processor configurations and memory module access patterns.
+ */
 void simulate(double* avg_access_time, int avg_access_time_len, int procs, char dist) 
 {
-    
-    double T_previous = 0;
-    const double epsilon = 0.02;
+    double T_previous = 0;            // Previous average access time
+    const double epsilon = 0.02;    // Termination condition threshold
     int cpu_cycle;
-    
 
-    createCircularQueue(procs);
+    createCircularQueue(procs);  // Initialize a circular queue of processors
 
-    for(int i=1; i<=NUM_MEMORY_MODULES; i++) 
+    for(int mem = 1; mem <= NUM_MEMORY_MODULES; mem++) 
     {
         Node* tempNode = head;
         do {
-            tempNode->mean = rand_uniform(i);
+            tempNode->mean = rand_uniform(mem);
             tempNode = tempNode->next;
         }while(tempNode!=head);
         
         T_previous=0;
 
-        // code to assign random memory modules to processors in circular queue
-        Node* temp  = head;
-        do{ 
-            temp->mem_mod = assignRandomValue(temp,dist , i);
-        }while (temp!=head);
-
+        // Assign random memory modules to processors in the circular queue
+        Node* temp = head;
+        do {
+            temp->mem_mod = assignRandomValue(temp, dist, mem);
+        } while (temp != head);
 
         float tot_tc_pi;
         float T_current;
-        int memory_modules[i]; //array to keep track of free memory modules and set it 0
+        int memory_modules[mem];  // An array to keep track of free memory modules, initialized to 0
 
-        for(int j=0;j<i;j++)
-            memory_modules[j]=0;
-        
-        for(int cpu_cycle=1; cpu_cycle<=MAX_CPU_CYCLES; cpu_cycle++) 
+        for(int itr = 0; itr < mem; itr++)
+            memory_modules[itr] = 0;
+
+        for(int cpu_cycle = 1; cpu_cycle <= MAX_CPU_CYCLES; cpu_cycle++) 
         {
-            // change head of the linked list to the first process denied memory module
-            Node* denied_process = allocateMemoryModules(memory_modules, dist, i);
+            // Change the head of the linked list to the first process denied a memory module
+            Node* denied_process = allocateMemoryModules(memory_modules, dist, mem);
             if (denied_process != NULL) {
                 head = denied_process;
             }
-            
+
             // Calculate T(S) for the current cycle
-            Node* curr = head;
-            tot_tc_pi = 0;
-            float tc_pi = 0;
+            tot_tc_pi = computeTotalTimeCummulative(cpu_cycle);
 
-            do {
-                if(curr->numAccess!=0)
-                    tc_pi = (float) cpu_cycle/curr->numAccess;
-                else 
-                    tc_pi=0;
-
-                tot_tc_pi += tc_pi;
-                curr = curr->next;
-
-            } while (curr != head);
-            
             T_current = (float)(tot_tc_pi / procs);
 
-            // Check the change between T_previous and T_current
+            // Check the change between T_previous and T_current against the termination condition
             if (fabs((T_previous - T_current) / T_current) < epsilon) {
                 break;
             }
             T_previous = T_current;   
-            //free up memory modules after each cycle
-            for(int itr = 0; itr<i;itr++) 
+
+            // Free up memory modules after each cycle
+            for(int itr = 0; itr < mem; itr++) 
             {
                 memory_modules[itr] = 0;
             }
         }
 
+        // Reset the numAccess for each processor in the circular queue
         Node* curr = head;
         do {
-            curr->numAccess=0;
+            curr->numAccess = 0;
             curr = curr->next;
-        }while(curr!=head);
+        } while (curr != head);
 
-        avg_access_time[i-1] = T_current;
+        // Store the resulting average access time for this configuration
+        avg_access_time[mem - 1] = T_current;
 
+        // Print a message if the simulation ends due to reaching the maximum CPU cycles
         if (cpu_cycle == MAX_CPU_CYCLES) {
-            printf("Simulation ended due to reaching maximum CPU cycles.\n");
+            printf("Simulation ended due to reaching the maximum CPU cycles.\n");
         }
     }
 }
@@ -196,4 +217,3 @@ int rand_normal_wrap(int mean, int dev, int max) {
         res_wrapped += max;
     return res_wrapped;
 }
-
