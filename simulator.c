@@ -45,11 +45,11 @@ int assignRandomValue(char dist, int mean, int mem_size)
     if(dist=='u')
         return rand_uniform(mem_size);
     else 
-        return rand_normal_wrap(mean,STANDARD_DEVIATION , mem_size);
+        return rand_normal_wrap(mean, STANDARD_DEVIATION, mem_size);
 }
 
 // Function to allocate memory modules and update number of accesses for each process
-Node* allocateMemoryModules(int memory_modules[],int mean, char dist, int mem_size) {
+Node* allocateMemoryModules(int memory_modules[], int mean, char dist, int mem_size) {
 
     Node* curr = head;
     Node* first_denied = NULL;
@@ -82,17 +82,18 @@ void createCircularQueue(int procs) {
 
 void simulate(double* avg_access_time, int avg_access_time_len, int procs, char dist) 
 {
-
+    
     double T_previous = 0;
     const double epsilon = 0.02;
     int cpu_cycle;
     
+
     createCircularQueue(procs);
 
     for(int i=1; i<=NUM_MEMORY_MODULES; i++) 
     {
         int mean = rand_uniform(i);
-        
+
         // code to assign random memory modules to processors in circular queue
         Node* temp  = head;
         do{ 
@@ -123,6 +124,8 @@ void simulate(double* avg_access_time, int avg_access_time_len, int procs, char 
             do {
                 if(curr->numAccess!=0)
                     tc_pi = (float) cpu_cycle/curr->numAccess;
+                else 
+                    tc_pi=0;
 
                 tot_tc_pi += tc_pi;
                 curr = curr->next;
